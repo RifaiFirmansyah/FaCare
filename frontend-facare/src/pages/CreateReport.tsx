@@ -37,7 +37,6 @@ export function CreateReport() {
     const fetchCategories = async () => {
       try {
         const data = await api.categories.getAll()
-        console.log("CATEGORIES DARI API:", data) // 🔥 TAMBAH DI SINI
         setCategories(Array.isArray(data) ? data : data.data || [])
       } catch (error) {
         toast.error('Gagal memuat kategori')
@@ -190,7 +189,7 @@ export function CreateReport() {
                   <option value="">Pilih Kategori...</option>
                   {categories.map((cat) => (
                     <option key={cat.id || cat._id} value={cat.id || cat._id}>
-                      {cat.nama || cat.name}
+                      {cat.nama_kategori || cat.nama || cat.name}
                     </option>
                   ))}
                   {/* Fallback if API fails or empty */}

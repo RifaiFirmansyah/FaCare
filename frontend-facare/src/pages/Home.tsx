@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import L from 'leaflet'
 import { toast } from 'sonner'
 import {
@@ -231,10 +231,20 @@ function ReportDetailModal({
 }
 export function Home() {
   useScreenInit()
+  const navigate = useNavigate()
   const [reports, setReports] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchParams, setSearchParams] = useSearchParams()
   const token = localStorage.getItem('token')
+  useEffect(() => {
+    const hash = window.location.hash.substring(1)
+    const params = new URLSearchParams(hash)
+    const type = params.get('type')
+    const accessToken = params.get('access_token')
+    if (accessToken && type === 'signup') {
+      navigate(`/verify-email${window.location.hash}`)
+    }
+  }, [])
   const selectedId = searchParams.get('laporan')
   const selectedReport = useMemo(
     () =>

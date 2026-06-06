@@ -10,6 +10,7 @@ import {
   Menu,
   X,
 } from 'lucide-react'
+import { api } from '../lib/api'
 export function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -17,7 +18,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token')
   const role = localStorage.getItem('role')
   const nama_lengkap = localStorage.getItem('nama_lengkap')
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await api.auth.logout()
+    } catch (error) {
+      // Even if the server call fails, proceed to clear local session
+    }
     localStorage.removeItem('token')
     localStorage.removeItem('user_id')
     localStorage.removeItem('role')
@@ -79,9 +85,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="hidden md:flex items-center space-x-4">
               {token ? (
                 <div className="flex items-center space-x-4">
-                  <span className="text-sm text-slate-600 font-medium">
+                  <Link
+                    to="/profile"
+                    className="text-sm text-slate-600 font-medium hover:text-blue-600 transition-colors"
+                  >
                     Hi, {nama_lengkap || 'User'}
-                  </span>
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="inline-flex items-center px-4 py-2 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors"
@@ -145,9 +154,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="pt-4 pb-3 border-t border-slate-200">
               {token ? (
                 <div className="px-5 space-y-3">
-                  <div className="text-base font-medium text-slate-800">
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-50"
+                  >
                     {nama_lengkap || 'User'}
-                  </div>
+                  </Link>
                   <button
                     onClick={() => {
                       handleLogout()

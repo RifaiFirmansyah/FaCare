@@ -1,6 +1,6 @@
-const BASE_URL = 'http://127.0.0.1:8000/api'
+const BASE_URL = 'https://backend-facere-production.up.railway.app/api'
 
-const getAuthHeaders = () => {
+const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem('token')
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
@@ -23,6 +23,71 @@ export const api = {
         body: JSON.stringify(data),
       })
       if (!res.ok) throw new Error('Login failed')
+      return res.json()
+    },
+    forgotPassword: async (email: string) => {
+      const res = await fetch(`${BASE_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      if (!res.ok) throw new Error('Gagal mengirim email reset')
+      return res.json()
+    },
+    resetPassword: async (data: {
+      access_token: string
+      refresh_token: string
+      new_password: string
+    }) => {
+      const res = await fetch(`${BASE_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Gagal reset password')
+      return res.json()
+    },
+    logout: async () => {
+      const res = await fetch(`${BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      })
+      if (!res.ok) throw new Error('Gagal logout')
+      return res.json()
+    },
+    getProfile: async () => {
+      const res = await fetch(`${BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      })
+      if (!res.ok) throw new Error('Gagal mengambil profil')
+      return res.json()
+    },
+
+    updateProfile: async (data: { nama_lengkap: string }) => {
+      const res = await fetch(`${BASE_URL}/auth/me`, {
+        method: 'PUT',
+        headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+        },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to update profile')
+      return res.json()
+    },
+    changePassword: async (data: { old_password: string; new_password: string }) => {
+      const res = await fetch(`${BASE_URL}/auth/change-password`, {
+        method: 'POST',
+        headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+        },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Failed to change password')
+      }
       return res.json()
     },
   },
@@ -48,16 +113,8 @@ export const api = {
         headers: { ...getAuthHeaders() },
         body: formData,
       })
-      const data = await res.json()
-      if (!res.ok) {
-        const errorMessage = data?.detail ? JSON.stringify(data.detail) : 'Failed to upload photo'
-        throw new Error(errorMessage)
-      }
-      const foto_url =
-        typeof data.foto_url === 'string'
-          ? data.foto_url
-          : data.foto_url?.publicUrl ?? data.foto_url?.data?.publicUrl ?? data.url ?? data.publicUrl
-      return { ...data, foto_url }
+      if (!res.ok) throw new Error('Failed to upload photo')
+      return res.json()
     },
     create: async (data: any) => {
       const res = await fetch(`${BASE_URL}/reports/`, {
@@ -68,12 +125,8 @@ export const api = {
         },
         body: JSON.stringify(data),
       })
-      const json = await res.json()
-      if (!res.ok) {
-        const errorMessage = json?.detail ? JSON.stringify(json.detail) : 'Failed to create report'
-        throw new Error(errorMessage)
-      }
-      return json
+      if (!res.ok) throw new Error('Failed to create report')
+      return res.json()
     },
     updateStatus: async (id: string | number, data: any) => {
       const res = await fetch(`${BASE_URL}/reports/${id}`, {

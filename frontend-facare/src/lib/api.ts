@@ -140,6 +140,13 @@ export const api = {
       if (!res.ok) throw new Error('Failed to update status')
       return res.json()
     },
+    exportPdf: async (status: string) => {
+      const res = await fetch(`${BASE_URL}/reports/export-pdf?status=${encodeURIComponent(status)}`, {
+        headers: { ...getAuthHeaders() },
+      })
+      if (!res.ok) throw new Error('Gagal export PDF')
+      return res.blob()
+    },
   },
   categories: {
     getAll: async () => {

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Shield, Clock, AlertCircle, CheckCircle2, Search } from 'lucide-react'
+import { Shield, Clock, AlertCircle, CheckCircle2, Search, FileDown, Loader2 } from 'lucide-react'
 import { api } from '../lib/api'
 import { useScreenInit } from '../useScreenInit'
+
 const StatusBadge = ({ status }: { status: string }) => {
   switch (status?.toLowerCase()) {
     case 'menunggu':
@@ -32,12 +33,16 @@ const StatusBadge = ({ status }: { status: string }) => {
       )
   }
 }
+
 export function Admin() {
   useScreenInit()
   const navigate = useNavigate()
   const [reports, setReports] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [exportStatus, setExportStatus] = useState('Menunggu')
+  const [exportLoading, setExportLoading] = useState(false)
+
   useEffect(() => {
     const role = localStorage.getItem('role')
     if (role !== 'admin') {
@@ -47,6 +52,7 @@ export function Admin() {
     }
     fetchReports()
   }, [navigate])
+
   const fetchReports = async () => {
     try {
       const data = await api.reports.getAll()
@@ -57,6 +63,7 @@ export function Admin() {
       setLoading(false)
     }
   }
+
   const handleStatusChange = async (id: string | number, newStatus: string) => {
     try {
       const userId = localStorage.getItem('user_id')
@@ -65,17 +72,39 @@ export function Admin() {
         status: newStatus,
       })
       toast.success('Status berhasil diperbarui')
-      fetchReports() // Refresh data
+      fetchReports()
     } catch (error) {
       toast.error('Gagal memperbarui status')
     }
   }
+
+  const handleExportPdf = async () => {
+    setExportLoading(true)
+    try {
+      const blob = await api.reports.exportPdf(exportStatus)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `laporan_${exportStatus.replace(' ', '_')}_${new Date().toISOString().slice(0, 10)}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+      toast.success(`PDF laporan "${exportStatus}" berhasil didownload!`)
+    } catch (error) {
+      toast.error('Gagal mengexport PDF')
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
   const filteredReports = reports.filter(
     (r) =>
       r.deskripsi?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.nama_pelapor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.kategori?.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-slate-50">
@@ -83,9 +112,12 @@ export function Admin() {
       </div>
     )
   }
+
   return (
     <div className="flex-1 bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
+
+        {/* Header */}
         <div className="sm:flex sm:items-center sm:justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center">
@@ -110,39 +142,64 @@ export function Admin() {
           </div>
         </div>
 
+        {/* Export PDF Card */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-6">
+          <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
+            <FileDown className="w-4 h-4 mr-2 text-blue-600" />
+            Export Laporan ke PDF
+          </h2>
+          <div className="flex items-center gap-3">
+            <select
+              value={exportStatus}
+              onChange={(e) => setExportStatus(e.target.value)}
+              className="block pl-3 pr-8 py-2 text-sm border-slate-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg border shadow-sm bg-white"
+            >
+              <option value="Menunggu">Menunggu</option>
+              <option value="Sedang Diperbaiki">Sedang Diperbaiki</option>
+              <option value="Selesai">Selesai</option>
+            </select>
+            <button
+              onClick={handleExportPdf}
+              disabled={exportLoading}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors shadow-sm"
+            >
+              {exportLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Mengexport...
+                </>
+              ) : (
+                <>
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Download PDF
+                </>
+              )}
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-slate-400">
+            Pilih status laporan yang ingin diexport, lalu klik Download PDF.
+          </p>
+        </div>
+
+        {/* Table */}
         <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
-                  >
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Laporan
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
-                  >
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Kategori
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
-                  >
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Pelapor
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
-                  >
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider"
-                  >
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Aksi
                   </th>
                 </tr>
@@ -150,19 +207,13 @@ export function Admin() {
               <tbody className="bg-white divide-y divide-slate-200">
                 {filteredReports.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="px-6 py-12 text-center text-sm text-slate-500"
-                    >
+                    <td colSpan={5} className="px-6 py-12 text-center text-sm text-slate-500">
                       Tidak ada laporan ditemukan.
                     </td>
                   </tr>
                 ) : (
                   filteredReports.map((report) => (
-                    <tr
-                      key={report.id || report._id}
-                      className="hover:bg-slate-50 transition-colors"
-                    >
+                    <tr key={report.id || report._id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           {report.foto_url && (
@@ -192,9 +243,7 @@ export function Admin() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-slate-900">
-                          {report.nama_pelapor ||
-                            report.user?.nama_lengkap ||
-                            'Anonim'}
+                          {report.nama_pelapor || report.user?.nama_lengkap || 'Anonim'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -203,18 +252,11 @@ export function Admin() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <select
                           value={report.status || 'Menunggu'}
-                          onChange={(e) =>
-                            handleStatusChange(
-                              report.id || report._id,
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleStatusChange(report.id || report._id, e.target.value)}
                           className="mt-1 block w-full pl-3 pr-8 py-1.5 text-sm border-slate-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md border shadow-sm bg-white"
                         >
                           <option value="Menunggu">Menunggu</option>
-                          <option value="Sedang Diperbaiki">
-                            Sedang Diperbaiki
-                          </option>
+                          <option value="Sedang Diperbaiki">Sedang Diperbaiki</option>
                           <option value="Selesai">Selesai</option>
                         </select>
                       </td>
@@ -225,6 +267,7 @@ export function Admin() {
             </table>
           </div>
         </div>
+
       </div>
     </div>
   )
